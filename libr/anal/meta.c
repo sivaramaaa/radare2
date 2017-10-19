@@ -195,7 +195,10 @@ R_API int r_meta_del(RAnal *a, int type, ut64 addr, ut64 size, const char *str) 
 		// first delete the end of this.
 		RAnalMetaItem *item = r_meta_find (a, addr, R_META_TYPE_ANY, R_META_WHERE_HERE);
 		if (item) {
-			r_meta_del (a, R_META_TYPE_END, addr + item->size, size, str);
+			RAnalMetaItem *item2 = r_meta_find (a, item->from, R_META_TYPE_END, R_META_WHERE_HERE);
+			if (item2) {
+				r_meta_del (a, R_META_TYPE_END, item2->from, item2->size, str);
+			}
 		}
 	}
 	if (size == UT64_MAX) {
