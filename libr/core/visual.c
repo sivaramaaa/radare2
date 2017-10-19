@@ -1939,7 +1939,7 @@ R_API int r_core_visual_cmd(RCore *core, const char *arg) {
 					int times = R_MAX (1, wheelspeed);
 					// Check if we have a data annotation.
 					RAnalMetaItem *ami = r_meta_find (core->anal,
-							core->offset, R_META_TYPE_DATA,
+							core->offset, R_META_TYPE_ANY,
 							R_META_WHERE_HERE);
 					if (ami && ami->type != R_META_TYPE_END) {
 						r_core_seek_delta (core, ami->size);

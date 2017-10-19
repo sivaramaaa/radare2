@@ -339,6 +339,10 @@ R_API RAnalMetaItem *r_meta_find(RAnal *a, ut64 at, int type, int where) {
 		mi.type = *infos;
 		mi.from = at;
 		mi.to = at + mi.size;
+		if (type == R_META_TYPE_ANY && mi.type == R_META_TYPE_END) {
+			// This isn't the thing we are looking for.
+			continue;
+		}
 		if (type != R_META_TYPE_ANY && type != mi.type) {
 			continue;
 		}
