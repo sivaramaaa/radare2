@@ -191,6 +191,13 @@ R_API int r_meta_del(RAnal *a, int type, ut64 addr, ut64 size, const char *str) 
 	char key[100], *dtr, *s, *p, *next;
 	const char *ptr;
 	int i;
+	if (type != R_META_TYPE_END) {
+		// first delete the end of this.
+		RAnalMetaItem *item = r_meta_find (a, addr, R_META_TYPE_ANY, R_META_WHERE_HERE);
+		if (item) {
+			r_meta_del (a, R_META_TYPE_END, addr + item->size, -1 * size, str);
+		}
+	}
 	if (size == UT64_MAX) {
 		// FULL CLEANUP
 		// XXX: this thing ignores the type
@@ -296,7 +303,11 @@ R_API int r_meta_add(RAnal *a, int type, ut64 from, ut64 to, const char *str) {
 	}
 	snprintf (val, sizeof (val)-1, "%c", type);
 	sdb_array_add (DB, key, val, 0);
-
+	// Mark the end of this guy.
+	if (type != R_META_TYPE_END) {
+		r_meta_add (a, R_META_TYPE_END, to,
+				to + (to - from) /* hold negative size */, str);
+	}
 	return true;
 }
 
@@ -361,6 +372,7 @@ R_API const char *r_meta_type_to_string(int type) {
 	case R_META_TYPE_FORMAT: return "Cf";
 	case R_META_TYPE_MAGIC: return "Cm";
 	case R_META_TYPE_COMMENT: return "CCu";
+	case R_META_TYPE_END: return "CE"; /* XXX wut */
 	}
 	return "(...)";
 }
