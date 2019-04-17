@@ -4326,6 +4326,40 @@ R_API void r_print_code(RPrint *p, ut64 addr, const ut8 *buf, int len, char lang
 	}
 }
 
+struct getreloc_t {
+        ut64 vaddr;
+        int size;
+};
+
+static int getreloc_tree(const void *user, const RBNode *n) {
+        struct getreloc_t *gr = (struct getreloc_t *)user;
+        const RBinReloc *r = container_of (n, const RBinReloc, vrb);
+        if ((r->vaddr >= gr->vaddr) && (r->vaddr < (gr->vaddr + gr->size))) {
+                return 0;
+        }
+
+        if (gr->vaddr > r->vaddr) {
+                return 1;
+        }
+        if (gr->vaddr < r->vaddr) {
+                return -1;
+        }
+        return 0;
+}
+
+static RBinReloc *getreloc(RCore *core, ut64 addr, int size) {
+        if (size < 1 || addr == UT64_MAX) {
+                return NULL;
+        }
+        RBNode *relocs = r_bin_get_relocs (core->bin);
+        if (!relocs) {
+                return NULL;
+        }
+        struct getreloc_t gr = { .vaddr = addr, .size = size };
+        RBNode *res = r_rbtree_find (relocs, &gr, getreloc_tree);
+        return res? container_of (res, RBinReloc, vrb): NULL;
+}
+
 static int cmd_print(void *data, const char *input) {
 	RCore *core = (RCore *) data;
 	int i, l, len, ret;
@@ -4800,11 +4834,25 @@ static int cmd_print(void *data, const char *input) {
 							if (pj) {
 								RFlagItem *f = r_flag_get_i (core->flags, refi->addr);
 								char *dst = r_str_newf ((f? f->name: "0x%08"PFMT64x), refi->addr);
+								char *dst2 = NULL;
+								RAnalOp *op = r_core_anal_op (core, refi->addr, R_ANAL_OP_MASK_BASIC);
+								RBinReloc *rel = getreloc (core, refi->addr, op->size);
+								if (rel) {
+									if (rel && rel->import && rel->import->name) {
+										dst2 = rel->import->name;
+									} else if (rel && rel->symbol && rel->symbol->name) {
+										dst2 = rel->symbol->name;
+									}
+								} else {
+									dst2 = dst;
+								}
+
 								pj_o (pj);
-								pj_ks (pj, "dest", dst);
+								pj_ks (pj, "dest", dst2);
 								pj_kn (pj, "addr", refi->addr);
 								pj_kn (pj, "at", refi->at);
 								pj_end (pj);
+								r_anal_op_free (op);
 							} else {
 								char *s = r_core_cmd_strf (core, "pdi %i @ 0x%08"PFMT64x, 1, refi->at);
 								r_cons_printf ("%s", s);
